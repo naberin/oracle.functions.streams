@@ -11,19 +11,29 @@ def buildAuth(username, password):
 
 def post_stream_log(endpoint, data, auth):
     url = f"{endpoint}/api/log"
+    logging.getLogger().info(f"Making POST request to {url}")
+
     resp = requests.post(url, data=data, auth=auth)
     return resp.status_code
 
 
 def handler(ctx, data: io.BytesIO = None):
+    logger = logging.getLogger()
+    logger.info("Starting function.")
+
     body = {}
     try:
-        cfg = ctx.Config()
+        cfg = dict(ctx.Config())
+        logger.info("retrieving config from context")
+        logger.info(cfg)
+
         CFG_USER = cfg["CTX_USER"]
         CFG_PWD = cfg["CTX_PWD"]
         CFG_ENDPOINT = cfg["CTX_ENDPOINT"]
 
         body = json.loads(data.getvalue())
+        logger.info("completed processing data")
+        logger.info(body)
 
         request_data = {
             "action": body["action"],
@@ -34,10 +44,12 @@ def handler(ctx, data: io.BytesIO = None):
             "event_id": 1,
             "details": body
         }
+        logger.info("completed processing bdy")
+        logger.info(request_data)
 
         auth = buildAuth(username=CFG_USER, password=CFG_PWD)
         post_stream_log(endpoint=CFG_ENDPOINT, data=request_data, auth=auth)
 
     except (Exception, ValueError) as ex:
-        logging.getLogger().info('error parsing json payload: ' + str(ex))
+        logger.getLogger().info('error parsing json payload: ' + str(ex))
     return body
