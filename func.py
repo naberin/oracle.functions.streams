@@ -61,6 +61,7 @@ def handler(ctx, data: io.BytesIO = None):
 
     body = {}
     try:
+        # Get Configuration Values from Oracle Functions Application
         cfg = dict(ctx.Config())
         logger.info("retrieving config from context")
         logger.info(cfg)
@@ -69,25 +70,34 @@ def handler(ctx, data: io.BytesIO = None):
         CFG_PWD = cfg["CTX_PWD"]
         CFG_ENDPOINT = cfg["CTX_ENDPOINT"]
 
-        body = json.loads(data.getvalue())
-        logger.info("completed processing data")
-        logger.info(body)
-
-        request_data = {
-            "action": body["action"],
-            "resource": body["resource"],
-            "date": body["date"],
-            "source": body["source"],
-            "level": body["level"],
-            "event_id": 1,
-            "details": body
-        }
-        logger.info("completed processing bdy")
-        logger.info(request_data)
-
+        # configure auth with given config variables
         auth = buildAuth(username=CFG_USER, password=CFG_PWD)
-        post_stream_log(endpoint=CFG_ENDPOINT, data=request_data, auth=auth)
+
+        # Process data passed upon invocation
+        body = json.loads(data.getvalue())
+
+        # Decode base64 encoded stream data
+        for log in body:
+
+            if 'value' in log:
+                log['value'] = base64_decode(log['value'])
+
+            if 'key' in log:
+                log['key'] = base64_decode(log['key'])
+
+            # Process stream data and make post
+            logger.info(body)
+            processed_log = processStream(with_value=log['value'])
+            post_stream_log(endpoint=CFG_ENDPOINT, data=processed_log, auth=auth)
 
     except (Exception, ValueError) as ex:
-        logger.getLogger().info('error parsing json payload: ' + str(ex))
-    return body
+        logger.info('error parsing json payload: ' + str(ex))
+
+    # complete function and return response
+    logger.info("Completing function.")
+
+    return response.Response(
+        ctx, response_data=json.dumps(
+            {"status": "completed", "count_processed": len(body)}),
+        headers={"Content-Type": "application/json"}
+    )
