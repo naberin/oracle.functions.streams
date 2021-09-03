@@ -17,6 +17,30 @@ def base64_decode(encoded):
         return encoded
 
 
+def processStream(with_value):
+    logger = logging.getLogger()
+    try:
+        logger.debug({"status": "Starting process", "data": with_value})
+        # converting stream object to expected POST payload
+        if with_value:
+
+            result = json.loads(with_value)
+            result["event_details"] = with_value
+
+            if "event_id" in with_value:
+                result["event_id"] = with_value["event_id"]
+            else:
+                result["event_id"] = None
+
+            logger.debug({"data": result, "status": "completed processing stream"})
+            return result
+
+        return {}
+
+    except ValueError as ve:
+        logger.info(f"encountered invalid value with log object.")
+        raise ValueError
+
 
 def buildAuth(username, password):
     return HTTPBasicAuth(username=username, password=password)
