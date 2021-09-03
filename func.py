@@ -48,10 +48,11 @@ def buildAuth(username, password):
 
 def post_stream_log(endpoint, data, auth):
     url = f"{endpoint}/api/log"
-    logging.getLogger().info(f"Making POST request to {url}")
+    logger = logging.getLogger()
+    logger.info(f"Making POST request to {url}")
 
-    resp = requests.post(url, data=data, auth=auth)
-    return resp.status_code
+    resp = requests.post(url, json=data, auth=auth)
+    logger.info(f"POST - {resp.status_code}")
 
 
 def handler(ctx, data: io.BytesIO = None):
